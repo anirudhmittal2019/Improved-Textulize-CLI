@@ -1,0 +1,30 @@
+Project Setup Guide
+===================
+
+This guide explains how to set up the project on a new machine.
+
+Overview
+--------
+
+The project is a command line tool written in Python. You will need
+Python 3.9 or newer and pip.
+
+Instructions
+------------
+
+1. Clone the repository.
+2. Create a virtual environment: python -m venv .venv
+3. Install the project: python -m pip install -e .
+4. Run the tool: rich README.md
+
+Windows notes
+~~~~~~~~~~~~~
+
+Activate the virtual environment with .venv\Scripts\activate
+and quote arguments that contain commas.
+
+Troubleshooting
+---------------
+
+If the rich command is not found, make sure the virtual environment
+is activated, or run python -m rich_cli instead.

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<head>
+<meta charset="UTF-8">
+<style>
+.r1 {font-weight: bold}
+.r2 {color: #000080; text-decoration-color: #000080; text-decoration: underline}
+.r3 {color: #ffffff; text-decoration-color: #ffffff; background-color: #000000}
+.r4 {font-weight: bold; text-decoration: underline}
+.r5 {color: #0000ff; text-decoration-color: #0000ff}
+.r6 {color: #808000; text-decoration-color: #808000; font-weight: bold}
+.r7 {font-style: italic}
+.r8 {color: #ffffff; text-decoration-color: #ffffff; background-color: #000000; font-weight: bold; text-decoration: underline}
+.r9 {color: #800080; text-decoration-color: #800080}
+.r10 {color: #800080; text-decoration-color: #800080; font-weight: bold}
+.r11 {color: #ffffff; text-decoration-color: #ffffff; background-color: #000000; font-weight: bold}
+body {
+    color: #000000;
+    background-color: #ffffff;
+}
+</style>
+</head>
+<html>
+<body>
+    <code>
+        <pre style="font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">╔═══════════════════════════════════════════════════════════════════════════════
+║                                             <span class="r1">Rich-CLI</span>                          
+╚═══════════════════════════════════════════════════════════════════════════════
+
+Rich-CLI is a command line toolbox for fancy output in the terminal, built with 
+(<span class="r2">https://github.com/Textualize/rich</span>).                                           
+
+Use the <span class="r3">rich</span> command to highlight a variety of file types in the terminal, with 
+rendering for Markdown and JSON files. Additionally you can markup and format te
+line.                                                                           
+
+🌆 splash image                                                                 
+
+
+                                     <span class="r4">What&#x27;s new in this version</span>                 
+
+This version of Rich-CLI adds three ways to show <span class="r1">only the part of a file you nee</span>
+
+| Feature | Option | Works with | Example | | --- | --- | --- | --- | | <span class="r1">Line sel</span>
+CSV, text, code, Markdown, RST | <span class="r3">rich data.csv --lines 50:70</span> | | <span class="r1">Section selecto</span>
+text, code, Markdown, RST | <span class="r3">rich notes.txt --section &quot;Instructions&quot;</span> | | <span class="r1">SQL quer</span>
+TSV | <span class="r3">rich data.csv --sql &quot;SELECT Name FROM data WHERE Age &gt; 30&quot;</span> |              
+
+Each feature is explained below, with examples you can copy and paste from the r
+repository (they use the sample files in <span class="r3">test_data/</span> (<span class="r2">test_data</span>)). See the <span class="r5">CHANGE</span>
+for the full list of changes.                                                   
+
+
+                                              <span class="r4">Contents</span>                          
+
+<span class="r6"> • </span><span class="r5">Installation</span> (<span class="r2">#installation</span>)                                                 
+<span class="r6">    • </span><span class="r5">Installing from this repository (for the team)</span> (<span class="r2">#installing-from-this-repo</span>
+<span class="r6"> • </span><span class="r5">Rich command</span> (<span class="r2">#rich-command</span>)                                                 
+<span class="r6"> • </span><span class="r5">Syntax highlighting</span> (<span class="r2">#syntax-highlighting</span>) · <span class="r5">Markdown</span> (<span class="r2">#markdown</span>) · <span class="r5">Jupyter n</span>
+<span class="r6">   </span>(<span class="r2">#jupyter-notebook</span>) · <span class="r5">JSON</span> (<span class="r2">#json</span>) · <span class="r5">CSV</span> (<span class="r2">#csv</span>) · <span class="r5">Rules</span> (<span class="r2">#rules</span>)             
+<span class="r6"> • </span><span class="r1">New:</span> <span class="r5">Selecting lines and rows (</span><span class="r3">--lines</span><span class="r5">)</span> (<span class="r2">#selecting-lines-and-rows---lines</span>)  
+<span class="r6"> • </span><span class="r1">New:</span> <span class="r5">Selecting sections of a document (</span><span class="r3">--section</span><span class="r5">)</span> (<span class="r2">#selecting-sections-of-a-d</span>
+<span class="r6"> • </span><span class="r1">New:</span> <span class="r5">Querying CSV files with SQL (</span><span class="r3">--sql</span><span class="r5">)</span> (<span class="r2">#querying-csv-files-with-sql---sql</span>)
+<span class="r6"> • </span><span class="r5">Which options work together</span> (<span class="r2">#which-options-work-together</span>)                   
+<span class="r6"> • </span><span class="r5">Pager</span> (<span class="r2">#pager</span>) · <span class="r5">Network</span> (<span class="r2">#network</span>) · <span class="r5">Exporting</span> (<span class="r2">#exporting</span>) · <span class="r5">Rich Printing</span> 
+<span class="r6">   </span><span class="r5">Reading from Stdin</span> (<span class="r2">#reading-from-stdin</span>) · <span class="r5">General Options</span> (<span class="r2">#general-options</span>)
+<span class="r6"> • </span><span class="r5">Troubleshooting</span> (<span class="r2">#troubleshooting</span>)                                           
+<span class="r6"> • </span><span class="r5">Development</span> (<span class="r2">#development</span>)                                                   
+
+
+                                            <span class="r4">Installation</span>                        
+
+There are a few options for installing Rich-CLI.                                
+
+                                          <span class="r1">Windows / Linux</span>                       
+
+You can install Rich-CLI with <span class="r5">pipx</span> (<span class="r2">https://pypa.github.io/pipx/</span>).              
+
+    pipx install rich-cli                                                       
+
+                                               <span class="r1">MacOS</span>                            
+
+You can install Rich-CLI with <span class="r5">Homebrew</span> (<span class="r2">https://brew.sh/</span>).                      
+
+    brew install rich                                                           
+
+                                             <span class="r1">Universal</span>                          
+
+Rich-CLI may be installed as a Python package, either using <span class="r3">pip</span>:                
+
+    python -m pip install rich-cli                                              
+
+Or using <span class="r3">conda</span> or <span class="r3">mamba</span>:                                                        
+
+    mamba install -c conda-forge rich-cli                                       
+
+                           <span class="r1">Installing from this repository (for the team)</span>       
+
+To use the version in this repository (including the new features), install it i
+the folder that contains <span class="r3">pyproject.toml</span>. Editable mode means the <span class="r3">rich</span> command ru
+folder, so your changes take effect without reinstalling.                       
+
+    python -m pip install -e .                                                  
+
+On Windows, run this in PowerShell from the project folder. Python 3.9 or newer 
+it worked with:                                                                 
+
+    rich --help                                                                 
+    rich test_data/mlb_players.csv --lines 1:5                                  
+
+If you move the project to another folder (or unzip a fresh copy), run <span class="r3">python -m</span>
+again from the new folder. See <span class="r5">Troubleshooting</span> (<span class="r2">#troubleshooting</span>) if the <span class="r3">rich</span> co
+
+
+                                            <span class="r4">Rich command</span>                        
+
+Once installed you should have the <span class="r3">rich</span> command in your path. Run the following 
+
+    rich --help                                                                 
+
+
+                                        <span class="r4">Syntax highlighting</span>                     
+
+To syntax highlight a file enter <span class="r3">rich</span> followed by a path. Many file formats are 
+
+    rich loop.py                                                                
+
+🌆 syntax1                                                                      
+
+Add the <span class="r3">--line-number</span> or <span class="r3">-n</span> switch to enable line numbers. Add <span class="r3">--guides</span> or <span class="r3">-g</span> to
+guides.                                                                         
+
+    rich loop.py -n -g                                                          
+
+🌆 syntax2                                                                      
+
+You can specify a <span class="r5">theme</span> (<span class="r2">https://pygments.org/styles/</span>) with <span class="r3">--theme</span>.            
+
+    rich loop.py --theme dracula                                                
+
+You can set the default theme via the <span class="r3">RICH_THEME</span> environment variable. So the fo
+equivalent to the above command:                                                
+
+    RICH_THEME=dracula rich loop.py                                             
+
+🌆 syntax3                                                                      
+
+By default, <span class="r3">rich</span> will wrap lines if they don&#x27;t fit within the available width. Y
+behavior with <span class="r3">--no-wrap</span>.                                                        
+
+<span class="r3">Rich</span> will try to deduce the format of the via from the filename. If you want to 
+auto-detected <span class="r7">lexer</span> you can explicitly set it with the <span class="r3">--lexer</span> or <span class="r3">-x</span> switch.    
+
+
+                                              <span class="r4">Markdown</span>                          
+
+You can request markdown rendering by adding the <span class="r3">--markdown</span> switch or <span class="r3">-m</span>. If the
+markdown will be auto-detected.                                                 
+
+    rich README.md                                                              
+
+🌆 markdown1                                                                    
+
+If your terminal supports hyperlinks, you can add <span class="r3">--hyperlinks</span> or <span class="r3">-y</span> which will 
+rather than full URLs.                                                          
+
+    rich README.md --hyperlinks                                                 
+
+
+                                          <span class="r4">Jupyter notebook</span>                      
+
+You can request Jupyter notebook rendering by adding the <span class="r3">--ipynb</span> switch. If the 
+<span class="r3">.ipynb</span> Jupyter notebook will be auto-detected.                                  
+
+    rich notebook.ipynb                                                         
+
+All options that apply to syntax highlighting can be applied to code cells, and 
+apply to Markdown can be applied to Markdown cells.                             
+
+
+                                                <span class="r4">JSON</span>                            
+
+You can request JSON pretty formatting and highlighting with the <span class="r3">--json</span> or <span class="r3">-J</span> sw
+ends with <span class="r3">.json</span> then JSON will be auto-detected.                                
+
+    rich cats.json                                                              
+
+🌆 json1                                                                        
+
+
+                                                <span class="r4">CSV</span>                             
+
+Rich can display the contents of a CSV (or TSV) as a table. If the file ends wit
+CSV will be auto-detected.                                                      
+
+    rich deniro.csv                                                             
+
+🌆 csv1                                                                         
+
+Large files can be trimmed with <span class="r3">--head</span> and <span class="r3">--tail</span>:                              
+
+    rich test_data/mlb_players.csv --head 10                                    
+    rich test_data/mlb_players.csv --tail 10                                    
+
+To pick out specific rows use <span class="r3">--lines</span> (<span class="r2">#selecting-lines-and-rows---lines</span>), and t
+pick columns use <span class="r3">--sql</span> (<span class="r2">#querying-csv-files-with-sql---sql</span>).                    
+
+
+                                               <span class="r4">Rules</span>                            
+
+You can render a horizontal rule with <span class="r3">--rule</span> or <span class="r3">-u</span>. Specify a rule style with <span class="r3">--</span>
+character(s) to render the line with <span class="r3">--rule-char</span>.                               
+
+    rich &quot;Hello [b]World[/b]!&quot; --rule                                           
+    rich &quot;Hello [b]World[/b]!&quot; --rule --rule-style &quot;red&quot;                        
+    rich &quot;Hello [b]World[/b]!&quot; --rule --rule-style &quot;red&quot; --rule-char &quot;=&quot;        
+
+🌆 syntax1                                                                      
+
+
+                                 <span class="r4">Selecting lines and rows (</span><span class="r8">--lines</span><span class="r4">)</span>             
+
+Use <span class="r3">--lines</span> to show only some of the lines of a file, or some of the rows of a C
+
+    rich test_data/mlb_players.csv --lines 50:70                                
+    rich test_data/sections.txt --lines 12:18 -n                                
+
+<span class="r3">--line</span> works too, as another name for <span class="r3">--lines</span>.                                  
+
+                                      <span class="r1">How to write a selection</span>                  
+
+| You write | You get | | --- | --- | | <span class="r3">50:70</span> | lines 50 to 70 (both included) |
+as <span class="r3">50:70</span> | | <span class="r3">50:</span> | line 50 to the end | | <span class="r3">:20</span> | the first 20 lines | | <span class="r3">7</span> | just 
+<span class="r3">1:5,50:70,100:</span> | several sections at once, separated by commas |                
+
+Line numbers start at 1. You can also repeat the option instead of using commas:
+
+    rich test_data/mlb_players.csv --lines 1:5 --lines 50:70 --lines 100        
+
+<span class="r9">▌ </span><span class="r10">PowerShell:</span><span class="r9"> put comma-separated sections in quotes, e.g. </span><span class="r3">--lines &quot;1:5,50:70&quot;</span><span class="r9">. </span>
+<span class="r9">▌ PowerShell treats the comma as a list separator. Repeating </span><span class="r3">--lines</span><span class="r9"> also works.</span>
+
+                                       <span class="r1">How lines are counted</span>                    
+
+<span class="r6"> • </span><span class="r1">CSV files:</span> <span class="r3">--lines</span> counts <span class="r1">rows after the header</span>, so <span class="r3">--lines 1:5</span> shows the fir
+<span class="r6">   </span>The header is always shown.                                                  
+<span class="r6"> • </span><span class="r1">Text and code files:</span> <span class="r3">--lines</span> counts the lines of the file. Add <span class="r3">-n</span> to show the
+<span class="r6">   </span>numbers.                                                                     
+<span class="r6"> • </span><span class="r1">Markdown and reStructuredText:</span> the selected lines are rendered (formatted), e
+<span class="r6">   </span><span class="r3">--lines 1:20</span>.                                                                
+
+                                         <span class="r1">Multiple sections</span>                      
+
+When you select several sections:                                               
+
+<span class="r6"> • </span>They are shown in the order they appear in the file, whatever order you write
+<span class="r6"> • </span>Overlapping sections are merged, so no line is shown twice.                  
+<span class="r6"> • </span>In CSV tables, a divider line marks each place where rows were skipped. In te
+<span class="r6">   </span>line separates sections. Use <span class="r3">-n</span> to see the gaps in the line numbers.         
+
+    rich test_data/mlb_players.csv --lines &quot;2:3,50:51,1034&quot;                     
+
+    ┃ Name            ┃ Team ┃ Position       ┃ ...                             
+    ┡━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━━━━━━━╇ ...                             
+    │ Paul Bako       │ BAL  │ Catcher        │ ...                             
+    │ Ramon Hernandez │ BAL  │ Catcher        │ ...                             
+    ├─────────────────┼──────┼────────────────┼ ...   &lt;- rows skipped here      
+    │ Darin Erstad    │ CWS  │ Outfielder     │ ...                             
+    │ Rob Mackowiak   │ CWS  │ Outfielder     │ ...                             
+    ├─────────────────┼──────┼────────────────┼ ...   &lt;- rows skipped here      
+    │ Josh Kinney     │ STL  │ Relief Pitcher │ ...                             
+
+                                             <span class="r1">Edge cases</span>                         
+
+| Situation | What happens | | --- | --- | | Backwards range, e.g. <span class="r3">--lines 70:50</span>
+with a warning | | Range past the end of the file, e.g. <span class="r3">--lines 5000:6000</span> | Skip
+saying how many lines (or rows) there are | | <span class="r3">0</span> or a negative number, e.g. <span class="r3">--lin</span>
+numbers start at 1. Use <span class="r3">--tail 5</span> for the last lines | | Missing value, e.g. <span class="r3">--li</span>
+<span class="r3">you forget the value?</span> | | Stray comma, e.g. <span class="r3">--lines &quot;1:5,&quot;</span> | Error: <span class="r3">empty sectio</span>
+<span class="r3">--head</span>, <span class="r3">--tail</span> or <span class="r3">--section</span> | Error: these can&#x27;t be combined | | Used with JSON 
+Error. Add <span class="r3">--syntax</span> to select lines of the raw file instead | | Used with <span class="r3">--sql</span> 
+the <span class="r1">query results</span> (see <span class="r5">SQL</span> (<span class="r2">#querying-csv-files-with-sql---sql</span>)) |              
+
+
+                            <span class="r4">Selecting sections of a document (</span><span class="r8">--section</span><span class="r4">)</span>        
+
+Use <span class="r3">--section</span> to show only the part of a document under a heading.              
+
+    rich test_data/sections.txt --section &quot;Instructions&quot;                        
+    rich README.md --section &quot;Pager&quot;                                            
+
+Repeat the option to show several sections. They appear in the order they&#x27;re in 
+
+    rich test_data/sections.txt --section &quot;Overview&quot; --section &quot;Troubleshooting&quot;
+
+                                      <span class="r1">What counts as a section</span>                  
+
+A section starts at a heading and continues until the next heading of the <span class="r1">same o</span>
+Sub-sections are included. Two styles of heading are recognised:                
+
+    ## Instructions              &lt;- Markdown heading (level = number of #)      
+                                                                                
+    Instructions                 &lt;- Underlined heading, as in reStructuredText  
+    ============                    and Markdown (levels go by the order the    
+                                    underline styles first appear in the file)  
+
+For example, in <span class="r3">test_data/sections.txt</span> (<span class="r2">test_data/sections.txt</span>):                
+
+    Project Setup Guide          &lt;- level 1                                     
+    ===================                                                         
+    Overview                     &lt;- level 2                                     
+    --------                                                                    
+    Instructions                 &lt;- level 2   --section &quot;Instructions&quot; shows fro
+    ------------                                                                
+    Windows notes                &lt;- level 3   (a sub-section, so it&#x27;s included) 
+    ~~~~~~~~~~~~~                                                               
+    Troubleshooting              &lt;- level 2   ...up to here                     
+    ---------------                                                             
+
+Good to know:                                                                   
+
+<span class="r6"> • </span><span class="r3">#</span> lines inside fenced code blocks (<span class="r3">```</span>) are not treated as headings.         
+<span class="r6"> • </span>If a title appears more than once, every matching section is shown.          
+<span class="r6"> • </span>With text and code files, add <span class="r3">-n</span> to show the original line numbers. Markdown 
+<span class="r6">   </span>rendered (formatted).                                                        
+
+                                       <span class="r1">How titles are matched</span>                   
+
+Titles are matched leniently. All of these find a heading called <span class="r3">Instructions</span>:  
+
+| You type | Why it matches | | --- | --- | | <span class="r3">instructions</span>, <span class="r3">INSTRUCTIONS</span> | Case 
+<span class="r3">&quot;Instructions&quot;</span>, <span class="r3">“Instructions”</span> | Surrounding quotes (including curly &quot;smart&quot; quo
+<span class="r3">## Instructions</span> | Leading <span class="r3">#</span> marks are ignored | | <span class="r3">Instructions:</span> | A trailing col
+ignored | | <span class="r3">Instructions</span> for <span class="r3">**Instructions**</span> or <span class="r3">[Instructions](#link)</span> | Markdow
+links in headings are ignored |                                                 
+
+If nothing matches exactly, numbering and emoji at the <span class="r1">start</span> of a heading are ig
+<span class="r3">--section &quot;Getting Started&quot;</span> finds <span class="r3">1. Getting Started</span>, <span class="r3">Step 1: Getting Started</span> or
+An exact match always wins: if a file has both <span class="r3">Setup</span> and <span class="r3">1. Setup</span>, <span class="r3">--section Set</span>
+
+                                     <span class="r1">When a section isn&#x27;t found</span>                 
+
+Rich suggests similar titles and lists all the sections in the file:            
+
+    rich test_data/sections.txt --section &quot;Instruction&quot;                         
+
+    section not found: &#x27;Instruction&#x27;                                            
+    Did you mean: Instructions                                                  
+                                                                                
+    Available sections:                                                         
+      Project Setup Guide                                                       
+        Overview                                                                
+        Instructions                                                            
+          Windows notes                                                         
+        Troubleshooting                                                         
+
+A near-miss is only suggested, never shown automatically, so you always get exac
+asked for.                                                                      
+
+                                             <span class="r1">Edge cases</span>                         
+
+| Situation | What happens | | --- | --- | | Section doesn&#x27;t exist | Error with 
+suggestions and the list of sections | | File has no headings | Error explaining
+styles are supported | | Empty title, e.g. <span class="r3">--section &quot;&quot;</span> | Error: <span class="r3">the section tit</span>
+Missing title, e.g. <span class="r3">--section -n</span> | Error: <span class="r3">did you forget the title?</span> | | Used wit
+suggesting <span class="r3">--lines</span> or <span class="r3">--sql</span> instead (CSV files have no headings) | | Used with J
+Error (these files have no headings) | | Used with <span class="r3">--head</span>, <span class="r3">--tail</span> or <span class="r3">--lines</span> | E
+combined |                                                                      
+
+
+                                <span class="r4">Querying CSV files with SQL (</span><span class="r8">--sql</span><span class="r4">)</span>             
+
+Use <span class="r3">--sql</span> to select columns, filter, sort, group and limit the rows of a CSV (or
+SQL query. The data is in a table called <span class="r11">data</span>.                                  
+
+    rich test_data/mlb_players.csv --sql &quot;SELECT Name, Team, Age FROM data WHERE
+    BY Age DESC&quot;                                                                
+
+    ┏━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━┓                                        
+    ┃ Name              ┃ Team ┃   Age ┃                                        
+    ┡━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━┩                                        
+    │ Julio Franco      │ NYM  │ 48.52 │                                        
+    │ Jamie Moyer       │ PHI  │ 44.28 │                                        
+    │ Randy Johnson     │ ARZ  │ 43.47 │                                        
+    │ ...               │      │       │                                        
+
+Queries use <span class="r5">SQLite&#x27;s SQL</span> (<span class="r2">https://www.sqlite.org/lang_select.html</span>) and run on an
+the data. Your CSV file is never changed.                                       
+
+                                          <span class="r1">SQL cheat sheet</span>                       
+
+| To... | Write | | --- | --- | | Show some columns | <span class="r3">SELECT Name, Team FROM dat</span>
+columns | <span class="r3">SELECT * FROM data</span> | | Filter rows | <span class="r3">SELECT * FROM data WHERE Team = &#x27;</span>
+numbers | <span class="r3">SELECT * FROM data WHERE Age &gt;= 30 AND Age &lt; 35</span> | | Filter on a range 
+<span class="r3">WHERE Age BETWEEN 30 AND 35</span> | | Match one of several values | <span class="r3">SELECT * FROM data</span>
+<span class="r3">(&#x27;BAL&#x27;, &#x27;NYM&#x27;)</span> | | Search text | <span class="r3">SELECT * FROM data WHERE Name LIKE &#x27;jo%&#x27;</span> (<span class="r3">%</span> = a
+character) | | Exclude rows | <span class="r3">SELECT * FROM data WHERE NOT Team = &#x27;BAL&#x27;</span> or <span class="r3">WHERE</span>
+Find empty values | <span class="r3">SELECT * FROM data WHERE Age IS NULL</span> | | Sort | <span class="r3">SELECT * FRO</span>
+<span class="r3">DESC</span> | | Show the first N rows | <span class="r3">SELECT * FROM data LIMIT 10</span> | | Skip rows | <span class="r3">SEL</span>
+<span class="r3">LIMIT 10 OFFSET 20</span> | | Count rows | <span class="r3">SELECT COUNT(*) FROM data</span> | | Group and summ
+<span class="r3">COUNT(*) AS players, ROUND(AVG(Age), 1) AS avg_age FROM data GROUP BY Team</span> | | F
+<span class="r3">SELECT Team, COUNT(*) FROM data GROUP BY Team HAVING COUNT(*) &gt; 35</span> | | Unique va
+<span class="r3">DISTINCT Team FROM data</span> | | Rename a column | <span class="r3">SELECT Name AS player FROM data</span> | 
+
+More examples:                                                                  
+
+    rich test_data/mlb_players.csv --sql &quot;SELECT Team, COUNT(*) AS players, ROUN
+    AS avg_age FROM mlb_players GROUP BY Team ORDER BY players DESC LIMIT 5&quot;    
+    rich test_data/deniro.csv --sql &quot;SELECT Title, Score FROM data WHERE Title L
+    rich test_data/deniro.csv --sql &quot;SELECT Year, Title FROM data WHERE Score &gt;=
+    Year&quot;                                                                       
+
+                                       <span class="r1">Table and column names</span>                   
+
+<span class="r6"> • </span>The table is called <span class="r3">data</span>. You can also use the file name: <span class="r3">mlb_players.csv</span> can
+<span class="r6">   </span><span class="r3">mlb_players</span>. Any <span class="r3">-</span> or spaces in the file name become <span class="r3">_</span>.                      
+<span class="r6"> • </span>Column names come from the CSV header. Put names containing spaces or symbols
+<span class="r6">   </span><span class="r3">SELECT [Height(inches)] FROM data</span>. Do the same for names that are SQL keyword
+<span class="r6">   </span>or <span class="r3">[Group]</span>.                                                                  
+<span class="r6"> • </span>If the header has duplicate names, later ones get a suffix: <span class="r3">Name</span>, <span class="r3">Name_2</span>.    
+<span class="r6"> • </span>If a file has no header, the columns are called <span class="r3">column1</span>, <span class="r3">column2</span>, and so on. 
+
+                                        <span class="r1">Upper and lower case</span>                    
+
+<span class="r6"> • </span><span class="r1">Text values ignore case</span>, including accented letters. <span class="r3">Team = &#x27;bal&#x27;</span> matches <span class="r3">BAL</span>
+<span class="r6">   </span>matches <span class="r3">JOSÉ</span>. This applies to <span class="r3">=</span>, <span class="r3">!=</span>, <span class="r3">IN</span>, <span class="r3">LIKE</span>, <span class="r3">ORDER BY</span>, <span class="r3">GROUP BY</span> and <span class="r3">DISTINC</span>
+<span class="r6"> • </span><span class="r1">Keywords, column names and the table name</span> can be written in any case: <span class="r3">select </span>
+<span class="r6">   </span>works.                                                                       
+<span class="r6"> • </span><span class="r1">To match exact case</span>, add <span class="r3">COLLATE BINARY</span> or use <span class="r3">GLOB</span>:                         
+
+    rich test_data/mlb_players.csv --sql &quot;SELECT Name FROM data WHERE Team = &#x27;BA
+    BINARY&quot;                                                                     
+    rich test_data/mlb_players.csv --sql &quot;SELECT Name FROM data WHERE Name GLOB 
+
+Accents are not ignored: <span class="r3">jose</span> and <span class="r3">josé</span> are different.                           
+
+                                 <span class="r1">Combining conditions: AND, OR, NOT</span>             
+
+Use <span class="r3">AND</span>, <span class="r3">OR</span> and <span class="r3">NOT</span> (in any case). <span class="r11">AND</span><span class="r1"> is applied before </span><span class="r11">OR</span>, so use parentheses 
+
+    rich test_data/mlb_players.csv --sql &quot;SELECT Name, Team, Age FROM data WHERE
+    OR Team = &#x27;PHI&#x27;) AND Age &gt; 40&quot;                                              
+
+| You write | SQL reads it as | | --- | --- | | <span class="r3">Team = &#x27;NYM&#x27; OR Team = &#x27;PHI&#x27; AND</span>
+<span class="r3">&#x27;NYM&#x27; OR (Team = &#x27;PHI&#x27; AND Age &gt; 40)</span>: <span class="r1">every</span> NYM player, plus PHI players over 40
+<span class="r3">OR Team = &#x27;PHI&#x27;) AND Age &gt; 40</span> | NYM or PHI players who are over 40 |            
+
+Rich warns you if you mix <span class="r3">AND</span> and <span class="r3">OR</span> without parentheses. Don&#x27;t use <span class="r3">&amp;&amp;</span> or <span class="r3">||</span>:   
+
+<span class="r6"> • </span><span class="r3">&amp;&amp;</span> is not valid SQL. Rich tells you to use <span class="r3">AND</span>.                              
+<span class="r6"> • </span><span class="r3">||</span> <span class="r1">joins text together</span> in SQL (<span class="r3">Name || &#x27; (&#x27; || Team || &#x27;)&#x27;</span>), it does not mean
+<span class="r6">   </span>in a <span class="r3">WHERE</span> clause, Rich warns you to use <span class="r3">OR</span>.                                 
+
+                                   <span class="r1">Text, numbers and empty values</span>               
+
+<span class="r6"> • </span><span class="r1">Text values go in single quotes</span>: <span class="r3">Team = &#x27;BAL&#x27;</span>. Double quotes are for column n
+<span class="r6">   </span>if you put text in them.                                                     
+<span class="r6"> • </span><span class="r1">Numbers:</span> columns where every value is a number are treated as numbers, so <span class="r3">Age</span>
+<span class="r6">   </span>numerically, not alphabetically.                                             
+<span class="r6"> • </span><span class="r1">Leading zeros:</span> values such as zip codes (<span class="r3">02134</span>) or IDs (<span class="r3">007</span>) are kept as text
+<span class="r6">   </span>zero isn&#x27;t lost.                                                             
+<span class="r6"> • </span><span class="r1">Empty values</span> are <span class="r3">NULL</span>. Find them with <span class="r3">IS NULL</span>. They are skipped by <span class="r3">COUNT(colu</span>
+<span class="r6"> • </span><span class="r1">Placeholders</span> <span class="r3">N/A</span>, <span class="r3">NA</span>, <span class="r3">null</span>, <span class="r3">none</span>, <span class="r3">nan</span> and <span class="r3">-</span> count as empty in columns that ot
+<span class="r6">   </span>numbers, so they don&#x27;t stop the column being numeric. They appear blank in th
+
+                                    <span class="r1">Combining with other options</span>                
+
+<span class="r3">--head</span>, <span class="r3">--tail</span> and <span class="r3">--lines</span> apply to the <span class="r1">results</span> of the query:                   
+
+    rich test_data/mlb_players.csv --sql &quot;SELECT Name, Age FROM data WHERE Team 
+    Age&quot; --head 3                                                               
+    rich test_data/mlb_players.csv --sql &quot;SELECT Name, Age FROM data WHERE Team 
+    Age&quot; --lines &quot;1:2,10&quot;                                                       
+
+General options such as <span class="r3">--title</span>, <span class="r3">--caption</span>, <span class="r3">--panel</span>, <span class="r3">--width</span> and <span class="r3">--export-html</span> w
+
+                                      <span class="r1">When a query goes wrong</span>                   
+
+If SQLite rejects a query, Rich shows the error, a hint on how to fix it, and th
+names:                                                                          
+
+    rich test_data/mlb_players.csv --sql &quot;SELECT Name FROM data WHER Age &gt; 40&quot;  
+
+    SQL error: near &quot;Age&quot;: syntax error                                         
+    Hint: Did you mean WHERE instead of WHER?                                   
+                                                                                
+    Table: data (or mlb_players)                                                
+    Columns: Name, Team, Position, [Height(inches)], [Weight(lbs)], Age         
+
+| Mistake | Hint | | --- | --- | | Misspelled keyword: <span class="r3">SELEC</span>, <span class="r3">WHER</span>, <span class="r3">ORDR BY</span> | <span class="r3">Di</span>
+<span class="r3">instead of WHER?</span> | | Misspelled column: <span class="r3">SELECT Nmae</span> | <span class="r3">Did you mean Name?</span> | | Mis
+<span class="r3">Name WHERE Age &gt; 40</span> | <span class="r3">Add FROM data</span> | | Text without quotes: <span class="r3">Team = BAL</span> | <span class="r3">put it</span>
+<span class="r3">&#x27;BAL&#x27;</span> | | Unclosed quote: <span class="r3">Team = &#x27;BAL</span> | <span class="r3">A quote or bracket isn&#x27;t closed</span> | | <span class="r3">&amp;&amp;</span> i
+<span class="r3">AND instead of &amp;&amp;</span> | | Column with symbols: <span class="r3">SELECT Height(inches)</span> | <span class="r3">Put column na</span>
+<span class="r3">brackets, e.g. [Height(inches)]</span> | | Keyword as a column: <span class="r3">SELECT Order</span> | <span class="r3">Put the </span>
+<span class="r3">square brackets: [Order]</span> | | Misspelled function: <span class="r3">COUNTT(*)</span> | <span class="r3">Did you mean COUNT</span>
+<span class="r3">WHERE</span> | Use <span class="r3">GROUP BY ... HAVING</span> instead | | Wrong table: <span class="r3">FROM players</span> | <span class="r3">The tabl</span>
+<span class="r3">mlb_players)</span> | | Query cut short: <span class="r3">... WHERE</span> | <span class="r3">The query is incomplete</span> |         
+
+Rich also shows a <span class="r1">warning</span> (and still runs the query) when a query probably doesn
+meant:                                                                          
+
+<span class="r6"> • </span><span class="r3">||</span> used as &quot;or&quot;                                                              
+<span class="r6"> • </span><span class="r3">AND</span> and <span class="r3">OR</span> mixed without parentheses                                         
+<span class="r6"> • </span>text in double quotes, e.g. <span class="r3">Team = &quot;BAL&quot;</span>                                     
+<span class="r6"> • </span>the query returned no rows                                                   
+
+                                               <span class="r1">Safety</span>                           
+
+Only <span class="r3">SELECT</span> queries are allowed (including <span class="r3">WITH ... SELECT</span>). Statements that cha
+files, such as <span class="r3">DROP</span>, <span class="r3">DELETE</span>, <span class="r3">INSERT</span>, <span class="r3">UPDATE</span>, <span class="r3">ATTACH</span> and <span class="r3">PRAGMA</span>, are blocked, as 
+one statement at once.                                                          
+
+                                   <span class="r1">Writing queries in PowerShell</span>                
+
+<span class="r6"> • </span>Put the whole query in <span class="r1">double quotes</span> and text values in <span class="r1">single quotes</span>: <span class="r3">--sql </span>
+<span class="r6">   </span><span class="r3">WHERE Team = &#x27;BAL&#x27;&quot;</span>.                                                         
+<span class="r6"> • </span>Use <span class="r1">square brackets</span> for column names with symbols rather than double quotes. 
+<span class="r6">   </span>PowerShell drop double quotes inside an argument.                            
+
+                                            <span class="r1">Limitations</span>                         
+
+<span class="r6"> • </span>CSV header detection is automatic and sometimes wrong. For example, <span class="r3">test_data</span>
+<span class="r6">   </span>(<span class="r2">test_data/airtravel.csv</span>) has a header of years (<span class="r3">Month, 1958, 1959, 1960</span>), wh
+<span class="r6">   </span>so its columns are <span class="r3">column1</span> to <span class="r3">column4</span>. If a query uses a name from the first 
+<span class="r6">   </span><span class="r3">Month ...</span>), Rich uses the first row as the header and shows a warning.       
+<span class="r6"> • </span>Large files are loaded into memory. A 200,000-row file takes a few seconds.  
+
+
+                                    <span class="r4">Which options work together</span>                 
+
+| | Text / code | Markdown / RST | CSV / TSV | JSON | Notebook | | --- | :---: |
+:---: | :---: | | <span class="r3">--lines</span> | ✅ | ✅ | ✅ rows | ❌ (use <span class="r3">--syntax</span>) | ❌ (use <span class="r3">--sy</span>
+| ✅ | ✅ | ❌ | ❌ | ❌ | | <span class="r3">--sql</span> | ❌ | ❌ | ✅ | ❌ | ❌ |                   
+
+<span class="r6"> • </span><span class="r3">--lines</span>, <span class="r3">--section</span>, <span class="r3">--head</span> and <span class="r3">--tail</span> can&#x27;t be combined with each other, exce
+<span class="r6">   </span><span class="r3">--head</span>/<span class="r3">--tail</span> and <span class="r3">--lines</span> work with <span class="r3">--sql</span> (they apply to the results).       
+<span class="r6"> • </span>All of them work with the general options (<span class="r3">--panel</span>, <span class="r3">--title</span>, <span class="r3">--width</span>, <span class="r3">--expor</span>
+<span class="r6">   </span>...) and with <span class="r3">-n</span> for line numbers where it applies.                          
+<span class="r6"> • </span>They work with input from stdin (<span class="r3">-</span>). Add <span class="r3">--csv</span> or <span class="r3">--markdown</span> so Rich knows th
+<span class="r6">   </span><span class="r3">data.csv | rich - --csv --lines 1:10</span>.                                        
+
+
+                                               <span class="r4">Pager</span>                            
+
+Add <span class="r3">--pager</span> to display the content with a built in pager application.           
+
+Scroll the pager with cursor keys, page up/down, home, end. Alternatively use th
+will be visible to the right of the terminal. Or use the vi navigation (j, k, ct
+
+    rich __main__.py -n -g --theme monokai --pager                              
+
+🌆 pager                                                                        
+
+
+                                              <span class="r4">Network</span>                           
+
+The <span class="r3">rich</span> command can read files from the internet you give it a URL starting wit
+<span class="r3">https://</span>.                                                                       
+
+    rich https://raw.githubusercontent.com/Textualize/rich-cli/main/README.md --
+
+🌆 network                                                                      
+
+
+                                             <span class="r4">Exporting</span>                          
+
+In addition to rendering to the console, <span class="r3">rich</span> can write an HTML file. This works
+Add <span class="r3">--export-html</span> or <span class="r3">-o</span> followed by the output path.                            
+
+    rich README.md -o readme.html                                               
+
+After running this command you should find a &quot;readme.html&quot; in your current worki
+
+
+                                           <span class="r4">Rich Printing</span>                        
+
+If you add the <span class="r3">--print</span> or <span class="r3">--p</span> option then Rich will treat the first argument as 
+(<span class="r2">https://rich.readthedocs.io/en/latest/markup.html</span>) which allows you to insert s
+similar in design to bbcode.                                                    
+
+    rich &quot;Hello, [bold magenta]World[/]!&quot; --print                               
+
+🌆 printing1                                                                    
+
+                                           <span class="r1">Soft wrapping</span>                        
+
+Rich will word wrap your text by default by inserting newlines where appropriate
+this behavior you can enable <span class="r7">soft</span> wrapping with <span class="r3">--soft</span>.                         
+
+
+                                         <span class="r4">Reading from Stdin</span>                     
+
+Where <span class="r3">rich</span> accepts a path, you can enter <span class="r3">-</span> which reads the content from stdin. Y
+you are piping output from another process.                                     
+
+Note that when rich isn&#x27;t writing directly to the terminal it will disable ansi 
+may want to add <span class="r3">--force-terminal</span> or <span class="r3">-F</span> to tell <span class="r3">rich</span> you want to keep ansi codes 
+
+    cat README.md | rich - --markdown --force-terminal                          
+
+
+                                          <span class="r4">General Options</span>                       
+
+There are a number of additional switches you may add to modify the content rend
+terminal. These options are universal and apply to all of the above features.   
+
+                                               <span class="r1">Style</span>                            
+
+You can set a style to apply to the output with <span class="r3">--style</span> or <span class="r3">-s</span>. The styles are sp
+<span class="r5">syntax</span> (<span class="r2">https://rich.readthedocs.io/en/latest/style.html</span>).                      
+
+    rich &quot;Hello, [b]World[/b]!&quot; --print --style &quot;on blue&quot;                       
+
+🌆 style1                                                                       
+
+                                             <span class="r1">Alignment</span>                          
+
+You can align output to the left, center, or right with the <span class="r3">--left</span>, <span class="r3">--center</span>, or
+their single letter counterparts: <span class="r3">-l</span>, <span class="r3">-c</span>, or <span class="r3">-r</span>.                                
+
+    rich &quot;Hello [b]World[/b]!&quot; --print --center                                 
+
+🌆 alignment1                                                                   
+
+                                               <span class="r1">Width</span>                            
+
+You can set the width of the output with <span class="r3">--width</span> or <span class="r3">-w</span> and the desired width. No
+behavior is to wrap text.                                                       
+
+    rich &quot;I must not fear. Fear is the mind-killer. Fear is the little-death tha
+    obliteration.&quot; -p -w 40                                                     
+
+🌆 width                                                                        
+
+                                            <span class="r1">Text Justify</span>                        
+
+You can set how <span class="r3">rich</span> will justify text with <span class="r3">--text-left</span>, <span class="r3">--text-right</span>, <span class="r3">--text-ce</span>
+<span class="r3">--text-full</span>; or the single letter equivalents: <span class="r3">-L</span>, <span class="r3">-R</span>, <span class="r3">-C</span>, and <span class="r3">-F</span>.              
+
+The difference between <span class="r3">--left</span> and <span class="r3">--text-left</span> may not be obvious unless you spec
+output. The <span class="r3">--left</span>, <span class="r3">--center</span>, and <span class="r3">--right</span> options will center the block of text 
+dimensions. Whereas, the <span class="r3">--text-left</span>, <span class="r3">--text-center</span>, and <span class="r3">--text-right</span> options de
+rendered <span class="r7">within</span> that block.                                                     
+
+In the following examples, we specify a width of 40 (<span class="r3">-w 40</span>) which is center alig
+switch. Note how the <span class="r3">-R</span>, <span class="r3">-C</span> and <span class="r3">-F</span> apply the text justification within the 40 ch
+
+    rich &quot;I must not fear. Fear is the mind-killer. Fear is the little-death tha
+    obliteration.&quot; -p -w 40 -c -L                                               
+    rich &quot;I must not fear. Fear is the mind-killer. Fear is the little-death tha
+    obliteration.&quot; -p -w 40 -c -R                                               
+    rich &quot;I must not fear. Fear is the mind-killer. Fear is the little-death tha
+    obliteration.&quot; -p -w 40 -c -C                                               
+    rich &quot;I must not fear. Fear is the mind-killer. Fear is the little-death tha
+    obliteration.&quot; -p -w 40 -c -F                                               
+
+                                              <span class="r1">Padding</span>                           
+
+You can apply <span class="r7">padding</span> around the output with <span class="r3">--padding</span> or <span class="r3">-d</span>.                   
+
+    rich &quot;Hello [b]World[/b]!&quot; -p -c --padding 3 --style &quot;on blue&quot;              
+
+🌆 padding1                                                                     
+
+                                               <span class="r1">Panel</span>                            
+
+You can draw a <span class="r7">panel</span> around content with <span class="r3">--panel</span> or <span class="r3">-a</span>, which takes one of a num
+(<span class="r2">https://rich.readthedocs.io/en/latest/appendix/box.html</span>).                      
+
+    rich &quot;Hello, [b]World[/b]!&quot; -p -a heavy                                     
+
+🌆 panel1                                                                       
+
+
+                                          <span class="r4">Troubleshooting</span>                       
+
+| Problem | Fix | | --- | --- | | <span class="r3">ModuleNotFoundError: No module named &#x27;rich_cli</span>
+| The installed <span class="r3">rich</span> command points at a folder that moved or no longer exists. 
+folder run <span class="r3">python -m pip uninstall -y rich-cli</span>, then <span class="r3">python -m pip install -e .</span> 
+<span class="r3">pip, please run ...</span> on Windows | Upgrade pip through Python: <span class="r3">python -m pip insta</span>
+<span class="r3">rich</span> runs an old version without the new options | Check which <span class="r3">rich</span> is first on 
+<span class="r3">rich</span> on Windows, <span class="r3">which rich</span> elsewhere), or run <span class="r3">python -m rich_cli ...</span> instead | 
+Check the spelling, e.g. <span class="r3">--lines</span> and <span class="r3">--section</span>. Run <span class="r3">rich --help</span> for the list of 
+<span class="r3">to read ...</span> / file not found | Paths are relative to the current folder. The sam
+<span class="r3">test_data/</span>, e.g. <span class="r3">rich test_data/mlb_players.csv</span> | | <span class="r3">--lines &quot;1:5,50:70&quot;</span> fails in
+the value in quotes, or repeat <span class="r3">--lines</span> for each section | | SQL query fails in P
+right | Use single quotes for text and square brackets for column names (see <span class="r5">Wri</span>
+<span class="r5">PowerShell</span> (<span class="r2">#writing-queries-in-powershell</span>)) | | SQL columns are called <span class="r3">column1</span>,
+CSV header wasn&#x27;t detected. See <span class="r5">Limitations</span> (<span class="r2">#limitations</span>) | | <span class="r3">section not found</span>
+suggestions and the list of sections in the message. Headings must be Markdown h
+or underlined titles |                                                          
+
+
+                                            <span class="r4">Development</span>                         
+
+                                               <span class="r1">Setup</span>                            
+
+    python -m pip install -e .                                                  
+    python -m pip install pytest black==22.3.0                                  
+
+                                         <span class="r1">Running the tests</span>                      
+
+    python -m pytest                                                            
+
+| Test file | Covers | | --- | --- | | <span class="r3">tests/test_csv_lines.py</span> | <span class="r3">--lines</span> on CSV 
+including edge cases | | <span class="r3">tests/test_sections.py</span> | <span class="r3">--section</span>: heading detection, 
+errors | | <span class="r3">tests/test_sql.py</span> | <span class="r3">--sql</span>: queries, case sensitivity, data types, war
+safety | | <span class="r3">tests/test_main.py</span> | Checks no two options use the same flag |       
+
+                                           <span class="r1">Project layout</span>                       
+
+| File | What it does | | --- | --- | | <span class="r3">src/rich_cli/__main__.py</span> | The <span class="r3">rich</span> comm
+checks, and rendering for each file type. Contains the <span class="r3">--lines</span> parsing (<span class="r3">parse_li</span>
+<span class="r3">select_line_blocks</span>) and CSV rendering (<span class="r3">render_csv</span>) | | <span class="r3">src/rich_cli/sections.py</span> 
+headings, works out where sections start and end, and matches titles | | <span class="r3">src/ric</span>
+<span class="r3">--sql</span>: loads CSV data into an in-memory SQLite database, works out column types,
+queries | | <span class="r3">src/rich_cli/sql_help.py</span> | <span class="r3">--sql</span>: the hints for failed queries and w
+mistakes | | <span class="r3">test_data/</span> | Sample files used in the examples and tests. <span class="r3">sections.</span>
+document for <span class="r3">--section</span> |                                                        
+
+                                            <span class="r1">Conventions</span>                         
+
+<span class="r6"> • </span>Format code with <span class="r3">black</span> (version 22.3.0, as pinned in <span class="r3">pyproject.toml</span>): <span class="r3">black s</span>
+<span class="r6"> • </span>Files use Windows (CRLF) line endings. Keep them that way so diffs only show 
+<span class="r6"> • </span>Add tests for new behaviour and edge cases, and update this README and the <span class="r5">CH</span>
+<span class="r6">   </span>(<span class="r2">CHANGELOG.md</span>).                                                              
+</pre>
+    </code>
+</body>
+</html>
