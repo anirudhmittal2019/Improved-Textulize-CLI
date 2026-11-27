@@ -7,15 +7,15 @@ from rich.syntax import Syntax
 
 
 class CodeBlock(TextElement):
-    """A code block with syntax highlighting."""
+    """A code block with syntax highlighting, indented by 4 spaces."""
 
     style_name = "markdown.code_block"
 
     @classmethod
-    def create(cls, markdown: "Markdown", node: Any) -> "CodeBlock":
-        node_info = node.info or ""
-        lexer_name = node_info.partition(" ")[0]
-        return cls(lexer_name or "default", markdown.code_theme)
+    def create(cls, markdown: "Markdown", token: Any) -> "CodeBlock":
+        info = token.info or ""
+        lexer_name = info.partition(" ")[0]
+        return cls(lexer_name or "text", markdown.code_theme)
 
     def __init__(self, lexer_name: str, theme: str) -> None:
         self.lexer_name = lexer_name
@@ -29,4 +29,6 @@ class CodeBlock(TextElement):
         yield Padding(syntax, (0, 4))
 
 
+# Fenced (```) and indented code blocks
+Markdown.elements["fence"] = CodeBlock
 Markdown.elements["code_block"] = CodeBlock

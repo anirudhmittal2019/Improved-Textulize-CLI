@@ -1,7 +1,7 @@
 from operator import itemgetter
 import re
 import sys
-from typing import TYPE_CHECKING, List, NoReturn, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, NoReturn, Optional, Set, Tuple, Union
 
 import click
 from pygments.util import ClassNotFound
@@ -40,7 +40,23 @@ COMMON_LEXERS = {
     "toml": "toml",
 }
 
-VERSION = "1.8.0"
+
+def _get_version() -> str:
+    """Return the installed version of rich-cli.
+
+    The version is defined once, in pyproject.toml, and read from the
+    installed package's metadata. After changing it, reinstall the package
+    (e.g. ``python -m pip install -e .``) to update the metadata.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("rich-cli")
+    except PackageNotFoundError:  # running from source without installing
+        return "unknown"
+
+
+VERSION = _get_version()
 
 
 AUTO = 0
@@ -216,6 +232,9 @@ class RichCommand(click.Command):
             opt1 = highlighter(short_opts[0]) if short_opts else Text("")
             opt2 = highlighter(long_opts[0] if long_opts else param.opts[0])
 
+            for secondary_opt in getattr(param, "secondary_opts", []):
+                opt2 += Text(" / ") + highlighter(secondary_opt)
+
             if param.metavar:
                 opt2 += Text(f" {param.metavar}", style="bold yellow")
 
@@ -330,7 +349,7 @@ def select_line_blocks(
         with `end` exclusive. Adjacent and overlapping sections are merged.
         Sections entirely past the end are skipped with a warning.
     """
-    selected = set()
+    selected: Set[int] = set()
     for start, end in line_ranges:
         first = start or 1
         if first > count:
@@ -372,19 +391,6 @@ def parse_line_ranges(
     ]
 
 
-def check_sql_query(
-    ctx: Optional[click.Context], param: Optional[click.Parameter], value: Optional[str]
-) -> Optional[str]:
-    """Catch a query that wasn't quoted, which the shell splits in to words
-    (e.g. --sql SELECT Name FROM data gives just "SELECT")."""
-    if value is not None and value.strip().upper() in {"SELECT", "WITH", "SELECT *"}:
-        raise click.BadParameter(
-            "put the whole query in quotes, "
-            'e.g. --sql "SELECT Name FROM data WHERE Age > 30"'
-        )
-    return value
-
-
 def parse_section_titles(
     ctx: Optional[click.Context],
     param: Optional[click.Parameter],
@@ -392,7 +398,7 @@ def parse_section_titles(
 ) -> Tuple[str, ...]:
     """Check --section values: titles must not be empty, and a value that is
     actually one of our options means the title was left out."""
-    option_names = set()
+    option_names: Set[str] = set()
     if ctx is not None:
         for command_param in ctx.command.params:
             option_names.update(getattr(command_param, "opts", []))
@@ -457,9 +463,15 @@ def parse_section_titles(
     "--sql",
     metavar="QUERY",
     default=None,
-    callback=check_sql_query,
     help="Query a CSV file with SQL. The table is called [b]data[/]. "
     '[dim]e.g. "SELECT Name, Age FROM data WHERE Age > 30 ORDER BY Age LIMIT 10"',
+)
+@click.option(
+    "--header/--no-header",
+    "csv_header",
+    default=None,
+    help="Treat the first row of a CSV file as column names ([b]--header[/]) or as data "
+    "([b]--no-header[/]). By default Rich guesses.",
 )
 @click.option(
     "--section",
@@ -616,6 +628,7 @@ def main(
     line_ranges: Optional[List[LineRange]] = None,
     sections: Tuple[str, ...] = (),
     sql: Optional[str] = None,
+    csv_header: Optional[bool] = None,
     text_full: bool = False,
     expand: bool = False,
     width: int = -1,
@@ -736,6 +749,12 @@ def main(
         if sections:
             on_error("cannot combine --lines with --section")
 
+    if csv_header is not None and resource_format != CSV:
+        on_error(
+            "--header and --no-header only work with CSV input "
+            "(use --csv or a .csv/.tsv file)"
+        )
+
     if sql is not None and resource_format != CSV:
         on_error("--sql requires CSV input (use --csv or a .csv/.tsv file)")
 
@@ -846,7 +865,9 @@ def main(
 
     elif resource_format == CSV:
 
-        renderable = render_csv(resource, head, tail, title, caption, line_ranges, sql)
+        renderable = render_csv(
+            resource, head, tail, title, caption, line_ranges, sql, csv_header
+        )
 
     elif resource_format == IPYNB:
 
@@ -874,6 +895,7 @@ def main(
                 code, lexer = read_resource(resource, lexer)
 
             num_lines = len(code.splitlines())
+            line_ranges_to_show: List[Optional[Tuple[int, int]]]
             if sections:
                 # One Syntax per section, so line numbers match the file
                 line_ranges_to_show = [
@@ -973,7 +995,7 @@ def main(
             width = console.width
         render_options = console.options.update(width=width - 1)
         lines = console.render_lines(renderable, render_options, new_lines=True)
-        PagerApp.run(title=resource, content=PagerRenderable(lines, width=width))
+        PagerApp(content=PagerRenderable(lines, width=width), title=resource).run()
 
     else:
         try:
@@ -1046,38 +1068,69 @@ def sections_text(text: str, names: Tuple[str, ...]) -> str:
 
 
 def query_csv(
-    resource: str, header: List[str], rows: List[List[str]], query: str
+    resource: str,
+    header: List[str],
+    rows: List[List[str]],
+    query: str,
+    show_warnings: bool = True,
+    guess_header: bool = True,
 ) -> Tuple[List[str], List[List[str]]]:
-    """Run a SQL query against CSV data, or exit with a helpful error."""
+    """Run a SQL query against CSV data, or exit with a helpful error.
+
+    If `guess_header` is True and the CSV has no header, but the query uses a
+    name from the first row, the first row is used as the header.
+    """
     import os.path
 
-    from .sql import TABLE_NAME, SQLQueryError, query_warnings, run_query, table_alias
+    from .sql import TABLE_NAME, SQLQueryError, column_names, run_query, table_alias
+    from .sql_help import column_reference, lint_query
 
     alias = None
     if resource != "-" and not resource.startswith(("http://", "https://")):
         alias = table_alias(os.path.splitext(os.path.basename(resource))[0])
 
-    for message in query_warnings(query):
-        warn(message)
+    if show_warnings:
+        column_count = max([len(header), *(len(row) for row in rows)], default=0)
+        for warning in lint_query(query, column_names(header, column_count)):
+            warn(warning)
+
     try:
-        columns, result_rows = run_query(header, rows, query, alias=alias)
+        result_columns, result_rows = run_query(header, rows, query, alias=alias)
     except SQLQueryError as error:
+        missing_column = re.match(r"no such column: (?:\w+\.)?(.+)", str(error))
+        if guess_header and not header and rows and missing_column:
+            # The header may not have been detected. If the query uses a name
+            # from the first row, use that row as the header.
+            name = missing_column.group(1).casefold()
+            if name in {value.strip().casefold() for value in rows[0]}:
+                warn(
+                    "using the first row of the file as the column names "
+                    "(add --header to do this without a warning)"
+                )
+                return query_csv(resource, rows[0], rows[1:], query, False, False)
+
         error_console.print(Text(f"SQL error: {error}", style="bold red"))
         for hint in error.hints:
-            error_console.print(Text(hint, style="yellow"), highlight=False)
+            error_console.print(Text(f"Hint: {hint}", style="green"), highlight=False)
         if error.columns:
-            table_names = Text("\nTable: ").append(TABLE_NAME, style="bold")
-            if alias:
-                table_names.append(" (or ").append(alias, style="bold").append(")")
-            error_console.print(table_names, highlight=False)
+            from rich.markup import escape as escape_markup
+
             error_console.print(
-                Text("Columns: ").append(", ".join(error.columns), style="bold"),
+                f"\nTable: [b]{TABLE_NAME}[/b]"
+                + (f" (or [b]{escape_markup(alias)}[/b])" if alias else "")
+            )
+            error_console.print(
+                Text("Columns: ").append(
+                    ", ".join(column_reference(column) for column in error.columns),
+                    style="bold",
+                ),
                 highlight=False,
             )
         sys.exit(-1)
+
     if not result_rows:
         warn("the query returned no rows")
-    return columns, result_rows
+    return result_columns, result_rows
 
 
 def lines_text(text: str, line_ranges: List[LineRange]) -> str:
@@ -1100,6 +1153,7 @@ def render_csv(
     caption: Optional[str] = None,
     line_ranges: Optional[List[LineRange]] = None,
     sql: Optional[str] = None,
+    csv_header: Optional[bool] = None,
 ) -> RenderableType:
     """Render resource as CSV.
 
@@ -1117,6 +1171,8 @@ def render_csv(
         sql (str, optional): SQL query to run against the data (in a table
             called ``data``). `head`, `tail` and `line_ranges` are applied to
             the query's results.
+        csv_header (bool, optional): True if the first row is the header,
+            False if it is data, or None to guess.
 
     Returns:
         RenderableType: Table renderable.
@@ -1145,6 +1201,9 @@ def render_csv(
         else:
             on_error(str(error))
 
+    if csv_header is not None:
+        has_header = csv_header
+
     csv_file = io.StringIO(csv_data)
     reader = csv.reader(csv_file, dialect=dialect)
 
@@ -1153,7 +1212,9 @@ def render_csv(
     table_rows = [row for row in rows if row]
 
     if sql is not None:
-        header, table_rows = query_csv(resource, header, table_rows, sql)
+        header, table_rows = query_csv(
+            resource, header, table_rows, sql, guess_header=csv_header is None
+        )
         has_header = True
 
     table = Table(

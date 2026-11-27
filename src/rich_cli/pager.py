@@ -1,13 +1,19 @@
-from enum import auto
-from typing import Iterable, List
+"""An interactive pager, built with Textual.
 
-from rich.console import Console, ConsoleOptions, RenderResult
+Keys: cursor keys, page up/down, home and end scroll as usual. There are also
+vi-style keys: j (down), k (up), ctrl+d / ctrl+u (half a page down / up) and
+space (a page down). Press q to quit.
+"""
+
+from typing import Iterable, List, Optional
+
+from rich.console import Console, ConsoleOptions, RenderableType, RenderResult
 from rich.measure import Measurement
 from rich.segment import Segment
-
-from textual import events
-from textual.app import App
-from textual.widgets import ScrollView
+from textual.app import App, ComposeResult
+from textual.binding import Binding
+from textual.containers import ScrollableContainer
+from textual.widgets import Static
 
 
 class PagerRenderable:
@@ -43,38 +49,52 @@ class PagerRenderable:
         return Measurement(self.width, self.width)
 
 
-class PagerApp(App):
-    """App to scroll renderable"""
+class PagerApp(App[None]):
+    """App to scroll a renderable."""
+
+    CSS = """
+    #body {
+        height: 1fr;
+    }
+    #content {
+        width: auto;
+    }
+    """
+
+    BINDINGS = [
+        Binding("q", "quit", "Quit"),
+        Binding("j", "scroll_lines(1)", "Down", show=False),
+        Binding("k", "scroll_lines(-1)", "Up", show=False),
+        Binding("space", "page_down", "Page down", show=False),
+        Binding("ctrl+d", "half_page(1)", "Half page down", show=False),
+        Binding("ctrl+u", "half_page(-1)", "Half page up", show=False),
+    ]
 
     def __init__(
-        self,
-        *args,
-        content=None,
-        **kwargs,
+        self, content: RenderableType = "", title: Optional[str] = None
     ) -> None:
+        super().__init__()
         self.content = content
-        super().__init__(*args, **kwargs)
+        if title:
+            self.title = title
 
-    async def on_load(self, event: events.Load) -> None:
-        await self.bind("q", "quit", "Quit")
+    def compose(self) -> ComposeResult:
+        with ScrollableContainer(id="body"):
+            yield Static(self.content, id="content")
 
-    async def on_key(self, event: events.Key) -> None:
-        if event.key == "j":
-            self.body.scroll_up()
-        elif event.key == "k":
-            self.body.scroll_down()
-        elif event.key == " ":
-            self.body.page_down()
-        elif event.key == "ctrl+u":
-            self.body.target_y -= self.body.size.height // 2
-            self.body.animate("y", self.body.target_y, easing="out_cubic")
-        elif event.key == "ctrl+d":
-            self.body.target_y += self.body.size.height // 2
-            self.body.animate("y", self.body.target_y, easing="out_cubic")
+    def on_mount(self) -> None:
+        self.body.focus()
 
-    async def on_mount(self, event: events.Mount) -> None:
-        self.body = body = ScrollView(auto_width=True)
+    @property
+    def body(self) -> ScrollableContainer:
+        return self.query_one("#body", ScrollableContainer)
 
-        await self.view.dock(body)
-        await body.focus()
-        await body.update(self.content)
+    def action_scroll_lines(self, lines: int) -> None:
+        self.body.scroll_relative(y=lines, animate=False)
+
+    def action_page_down(self) -> None:
+        self.body.scroll_page_down(animate=False)
+
+    def action_half_page(self, direction: int) -> None:
+        half_page = max(1, self.body.size.height // 2)
+        self.body.scroll_relative(y=direction * half_page, animate=True)

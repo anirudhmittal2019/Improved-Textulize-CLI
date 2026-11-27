@@ -27,7 +27,7 @@ import difflib
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 # Markdown ATX heading: up to 3 spaces, 1-6 '#', a space, the title, and an
 # optional closing sequence of '#'.
@@ -132,7 +132,7 @@ def _find_headings(lines: List[str]) -> List[Tuple[int, int, str, Tuple]]:
     `start` is the first line of the heading (the overline, if any) and `end`
     is the index one past the heading's last line.
     """
-    headings = []
+    headings: List[Tuple[int, int, str, Tuple[Any, ...]]] = []
     fence: Optional[str] = None
     index = 0
     line_count = len(lines)

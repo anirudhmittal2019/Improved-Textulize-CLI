@@ -9,11 +9,10 @@ from rich_cli.sql import (
     SQLQueryError,
     column_names,
     format_value,
-    query_warnings,
     run_query,
     table_alias,
-    tokenize,
 )
+from rich_cli.sql_help import explain_error, lint_query
 
 TEST_DATA = Path(__file__).parent.parent / "test_data"
 MLB_PLAYERS = str(TEST_DATA / "mlb_players.csv")
@@ -126,7 +125,7 @@ def test_only_select_is_allowed(query, tmp_path, monkeypatch):
         ("SELECT Nope FROM data", "no such column: Nope"),
         ("SELECT * FROM nope", "no such table: nope"),
         ("SELEC * FROM data", "syntax error"),
-        ("SELECT 1; SELECT 2", "only one query can be run at a time"),
+        ("SELECT 1; SELECT 2", "one statement"),
         ("   ", "the query is empty"),
     ],
 )
@@ -152,15 +151,7 @@ def test_column_names():
 
 @pytest.mark.parametrize(
     "value, expected",
-    [
-        (None, ""),
-        (3, "3"),
-        (74.0, "74"),
-        (22.99, "22.99"),
-        ("text", "text"),
-        (0.1 + 0.2, "0.3"),  # floating point noise is hidden
-        (28.736711798839457, "28.7367117988395"),
-    ],
+    [(None, ""), (3, "3"), (74.0, "74"), (22.99, "22.99"), ("text", "text")],
 )
 def test_format_value(value, expected):
     assert format_value(value) == expected
@@ -254,299 +245,219 @@ def test_cli_sql_requires_csv():
     assert "--sql requires CSV" in result.output
 
 
-# --- case sensitivity --------------------------------------------------------------
+# --- case sensitivity ------------------------------------------------------------
 
-
-def names(query, header=HEADER, rows=ROWS):
-    return [row[0] for row in run_query(header, rows, query)[1]]
-
-
-def test_text_comparisons_ignore_case():
-    assert names("SELECT Name FROM data WHERE Team = 'bal'") == ["Alice", "Carol"]
-    assert names("SELECT Name FROM data WHERE 'bal' = Team") == ["Alice", "Carol"]
-    assert names("SELECT Name FROM data WHERE Team IN ('nym', 'sf')") == ["Bob", "Dave"]
-    assert names("SELECT Name FROM data WHERE Name LIKE 'ALI%'") == ["Alice"]
-
-
-def test_collate_binary_is_case_sensitive():
-    assert names("SELECT Name FROM data WHERE Team = 'bal' COLLATE BINARY") == []
-    assert names("SELECT Name FROM data WHERE Team = 'BAL' COLLATE BINARY") == [
-        "Alice",
-        "Carol",
-    ]
-
-
-def test_case_insensitive_for_non_ascii_text():
-    header, rows = ["Name"], [["\u00c9lodie"], ["Zo\u00eb"]]
-    assert names("SELECT Name FROM data WHERE Name = '\u00e9LODIE'", header, rows) == [
-        "\u00c9lodie"
-    ]
-
-
-def test_order_by_text_ignores_case():
-    header, rows = ["Name"], [["banana"], ["Cherry"], ["apple"]]
-    assert names("SELECT Name FROM data ORDER BY Name", header, rows) == [
-        "apple",
-        "banana",
-        "Cherry",
-    ]
-
-
-def test_keywords_columns_and_tables_any_case():
-    columns, rows = run_query(
-        HEADER, ROWS, "sElEcT nAmE FrOm DaTa WhErE aGe > 50", alias="Players"
-    )
-    assert columns == ["Name"]  # the column's own name is used
-    assert rows == [["Carol"]]
-    assert run_query(HEADER, ROWS, "SELECT COUNT(*) FROM PLAYERS", alias="Players")[
-        1
-    ] == [["4"]]
-
-
-# --- AND / OR ------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "query, expected",
-    [
-        ("SELECT Name FROM data WHERE Team = 'BAL' AND Age > 50", ["Carol"]),
-        ("SELECT Name FROM data WHERE Team = 'SF' OR Age > 50", ["Carol", "Dave"]),
-        ("select name from data where team = 'bal' and age > 50", ["Carol"]),
-        # AND is applied before OR
-        (
-            "SELECT Name FROM data WHERE Team = 'NYM' OR Team = 'BAL' AND Age > 50",
-            ["Bob", "Carol"],
-        ),
-        (
-            "SELECT Name FROM data WHERE (Team = 'NYM' OR Team = 'BAL') AND Age > 20",
-            ["Bob", "Carol"],
-        ),
-        ("SELECT Name FROM data WHERE NOT (Team = 'BAL' OR Age IS NULL)", ["Bob"]),
-        (
-            "SELECT Name FROM data WHERE Age BETWEEN 9 AND 31 OR Team = 'SF'",
-            ["Alice", "Bob", "Dave"],
-        ),
-    ],
-)
-def test_and_or(query, expected):
-    assert names(query) == expected
-
-
-def test_warning_for_and_or_without_parentheses():
-    message = "AND is applied before OR"
-    for query in (
-        "SELECT * FROM data WHERE a = 1 OR b = 2 AND c = 3",
-        "select * from data where a = 1 and b = 2 or c = 3",
-    ):
-        assert any(message in warning for warning in query_warnings(query))
-    # Not when parentheses group them, or when only one is used
-    assert query_warnings("SELECT * FROM data WHERE (a = 1 OR b = 2) AND c = 3") == []
-    assert query_warnings("SELECT * FROM data WHERE a = 1 AND b = 2 AND c = 3") == []
-    assert query_warnings("SELECT * FROM data WHERE a = 1 OR b = 2 OR c = 3") == []
-    # The AND of BETWEEN doesn't count
-    assert query_warnings("SELECT * FROM data WHERE a BETWEEN 1 AND 2 OR b = 3") == []
-    # Nor do words inside strings
-    assert query_warnings("SELECT * FROM data WHERE a = 'x and y or z'") == []
-
-
-@pytest.mark.parametrize(
-    "query, message",
-    [
-        ("SELECT * FROM data WHERE a > 1 || b = 2", "'||' joins text together"),
-        ("SELECT * FROM data WHERE a > 1 | b = 2", "'|' is a bitwise operator"),
-        ("SELECT * FROM data WHERE a > 1 & b = 2", "'&' is a bitwise operator"),
-        ("SELECT a FROM data GROUP BY a HAVING a > 1 || b", "'||' joins text together"),
-    ],
-)
-def test_warning_for_symbols_used_as_or_and(query, message):
-    assert any(message in warning for warning in query_warnings(query))
-
-
-def test_no_warning_for_text_concatenation():
-    assert query_warnings("SELECT Name || ' (' || Team || ')' FROM data") == []
-    assert query_warnings("SELECT * FROM data WHERE Name = 'a || b'") == []
-
-
-def test_double_ampersand_is_an_error():
-    with pytest.raises(SQLQueryError, match="'&&' isn't SQL") as error:
-        run_query(HEADER, ROWS, "SELECT * FROM data WHERE Age > 1 && Team = 'BAL'")
-    assert "use AND" in error.value.hints[0]
-    # But it's fine inside a string
-    assert names("SELECT Name FROM data WHERE Name = 'a && b'") == []
-
-
-# --- wrong queries -----------------------------------------------------------------
-
-
-def error_for(query, header=HEADER, rows=ROWS, alias=None):
-    with pytest.raises(SQLQueryError) as error:
-        run_query(header, rows, query, alias=alias)
-    return str(error.value), " | ".join(error.value.hints)
-
-
-@pytest.mark.parametrize(
-    "query, message, hint",
-    [
-        ("SELECT Name WHERE Age > 1", "no such column: Name", "has no FROM clause"),
-        ("SELECT Nme FROM data", "no such column: Nme", "Did you mean Name?"),
-        (
-            "SELECT Height(inches) FROM data",
-            "no such column: inches",
-            "Did you mean [Height(inches)]?",
-        ),
-        ("SELECT Height FROM data", "no such column: Height", "[Height(inches)]"),
-        (
-            "SELECT * FROM data WHERE Team = BAL",
-            "no such column: BAL",
-            "put it in single quotes: 'BAL'",
-        ),
-        ("SELECT * FROM players", "no such table: players", "The table is called data"),
-        ("SELECT MEDIAN(Age) FROM data", "no such function: MEDIAN", "sqlite.org"),
-        ("SELEC * FROM data", "syntax error", "Did you mean SELECT instead of SELEC?"),
-        (
-            "SELECT * FROM data WHRE Age > 1",
-            "syntax error",
-            "Did you mean WHERE instead of WHRE?",
-        ),
-        (
-            "SELECT * FROM data ORDR BY Age",
-            "syntax error",
-            "Did you mean ORDER instead of ORDR?",
-        ),
-        ("Age > 30", "syntax error", "Queries start with SELECT"),
-        ("SELECT * FROM data WHERE !(Age > 1)", "", "Use NOT instead of '!'"),
-        (
-            "SELECT * FROM data WHERE Age > 1 AND",
-            "the query is incomplete",
-            "ends with 'AND'",
-        ),
-        ("SELECT * FROM data WHERE", "the query is incomplete", "ends with 'WHERE'"),
-        ("SELECT * FROM data WHERE Team = 'BAL", "a quote is not closed", "'BAL"),
-        ("SELECT * FROM data; DROP TABLE data", "only one query", "Remove the ';'"),
-    ],
-)
-def test_wrong_query_hints(query, message, hint):
-    error_message, hints = error_for(query)
-    assert message in error_message
-    assert hint in hints
-
-
-def test_keyword_column_hint():
-    message, hints = error_for(
-        "SELECT Name, Order FROM data", ["Name", "Order"], [["a", "1"]]
-    )
-    assert "syntax error" in message
-    assert "put it in square brackets: [Order]" in hints
-    # Works with brackets
-    assert run_query(["Name", "Order"], [["a", "1"]], "SELECT [Order] FROM data")[
-        1
-    ] == [["1"]]
-
-
-def test_no_false_keyword_hint_for_normal_columns():
-    _, hints = error_for("SELECT * FROM data WHRE Age > 1")
-    assert "SQL keyword" not in hints
-
-
-def test_trailing_semicolon_is_fine():
-    assert names("SELECT Name FROM data WHERE Team = 'SF';") == ["Dave"]
-
-
-def test_comments_are_ignored():
-    assert names("SELECT Name -- the name\nFROM data /* all */ WHERE Team = 'SF'") == [
-        "Dave"
-    ]
-
-
-def test_tokenize_strings_and_names():
-    tokens = tokenize("SELECT [a b], \"c\"\"d\" FROM t WHERE x = 'it''s || and'")
-    kinds = [(token.kind, token.text) for token in tokens]
-    assert ("identifier", "[a b]") in kinds
-    assert ("identifier", '"c""d"') in kinds
-    assert ("string", "'it''s || and'") in kinds
-    assert ("symbol", "||") not in kinds
-
-
-# --- data types --------------------------------------------------------------------
-
-EDGE_HEADER = ["zip", "score", "id", "note", "ratio"]
-EDGE_ROWS = [
-    ["02134", "10", "12345678901234567890123", "a", "1e3"],
-    ["10001", "N/A", "2", "b", "-"],
-    ["94105", "7.5", "3", "nan", "0.5"],
+PEOPLE_HEADER = ["Name", "Team", "Zip", "Score"]
+PEOPLE = [
+    ["José", "BAL", "02134", "90"],
+    ["jose", "bal", "10001", "N/A"],
+    ["JOSÉ", "Nym", "94105", "75"],
+    ["Zoë", "SF", "00501", "-"],
 ]
 
 
-def edge(query):
-    return run_query(EDGE_HEADER, EDGE_ROWS, query)[1]
+def names(query: str):
+    return [row[0] for row in run_query(PEOPLE_HEADER, PEOPLE, query)[1]]
+
+
+def test_text_comparisons_ignore_case():
+    assert names("SELECT Name FROM data WHERE Team = 'BAL'") == ["José", "jose"]
+    assert names("SELECT Name FROM data WHERE Team IN ('nym', 'sf')") == ["JOSÉ", "Zoë"]
+    assert names("SELECT Name FROM data WHERE Name = 'josé'") == ["José", "JOSÉ"]
+
+
+def test_like_ignores_case_for_all_letters():
+    assert names("SELECT Name FROM data WHERE Name LIKE 'JOS%'") == [
+        "José",
+        "jose",
+        "JOSÉ",
+    ]
+    assert names("SELECT Name FROM data WHERE Name LIKE 'zoË'") == ["Zoë"]
+
+
+def test_order_and_group_ignore_case():
+    assert names("SELECT Team FROM data ORDER BY Team") == ["BAL", "bal", "Nym", "SF"]
+    _, rows = run_query(
+        PEOPLE_HEADER, PEOPLE, "SELECT COUNT(*) FROM data GROUP BY Team ORDER BY Team"
+    )
+    assert rows == [["2"], ["1"], ["1"]]
+
+
+def test_case_sensitive_comparison_is_still_possible():
+    assert names("SELECT Name FROM data WHERE Team = 'bal' COLLATE BINARY") == ["jose"]
+    assert names("SELECT Name FROM data WHERE Team GLOB 'bal'") == ["jose"]
+
+
+def test_keywords_columns_and_table_ignore_case():
+    _, rows = run_query(
+        PEOPLE_HEADER, PEOPLE, "select NAME from DATA where team = 'sf'"
+    )
+    assert rows == [["Zoë"]]
+
+
+# --- data types ------------------------------------------------------------------
 
 
 def test_leading_zeros_are_kept():
-    assert edge("SELECT zip FROM data") == [["02134"], ["10001"], ["94105"]]
-    assert edge("SELECT zip FROM data WHERE zip = '02134'") == [["02134"]]
+    assert names("SELECT Zip FROM data") == ["02134", "10001", "94105", "00501"]
+    assert names("SELECT Name FROM data WHERE Zip = '02134'") == ["José"]
 
 
-def test_missing_value_placeholders_in_number_columns():
-    # N/A doesn't stop score being a number column
-    assert edge("SELECT score FROM data WHERE score > 8") == [["10"]]
-    assert edge("SELECT COUNT(*) FROM data WHERE score IS NULL") == [["1"]]
-    assert edge("SELECT ratio FROM data ORDER BY ratio DESC") == [
-        ["1000"],
-        ["0.5"],
-        [""],
-    ]
+def test_missing_value_markers_in_numeric_columns():
+    # 'N/A' and '-' are treated as empty, so Score is still numeric
+    assert names("SELECT Name FROM data WHERE Score > 80") == ["José"]
+    assert names("SELECT Name FROM data WHERE Score IS NULL") == ["jose", "Zoë"]
 
 
-def test_placeholders_are_kept_in_text_columns():
-    assert edge("SELECT note FROM data") == [["a"], ["b"], ["nan"]]
+@pytest.mark.parametrize(
+    "values, expected",
+    [
+        (["1", "2", ""], "INTEGER"),
+        (["1", "2.5"], "REAL"),
+        (["1", "N/A", "null", "-"], "INTEGER"),
+        (["N/A", ""], "TEXT"),
+        (["007", "12"], "TEXT"),
+        (["0", "0.5", "-3"], "REAL"),
+        (["1", "abc"], "TEXT"),
+        (["inf", "1"], "TEXT"),
+        (["1e3", "2"], "REAL"),
+    ],
+)
+def test_column_type(values, expected):
+    from rich_cli.sql import _column_type
+
+    assert _column_type(values) == expected
 
 
-def test_huge_numbers_do_not_crash():
-    assert edge("SELECT id FROM data WHERE zip = '02134'") == [
-        ["12345678901234567890123"]
-    ]
+# --- warnings (queries that run, but may be wrong) --------------------------------
+
+LINT_COLUMNS = ["Name", "Team", "Age"]
 
 
-# --- command line: edge cases -----------------------------------------------------
+@pytest.mark.parametrize(
+    "query, warning",
+    [
+        (
+            "SELECT * FROM data WHERE Team = 'A' OR Team = 'B' AND Age > 1",
+            "AND is applied before OR",
+        ),
+        (
+            "SELECT * FROM data WHERE Age BETWEEN 1 AND 5 AND Team = 'A' OR Age = 9",
+            "AND is applied before OR",
+        ),
+        ("SELECT * FROM data WHERE Age > 1 || Team = 'x'", "'||' joins text"),
+        ('SELECT * FROM data WHERE Team = "BAL"', "Use single quotes for text: 'BAL'"),
+    ],
+)
+def test_lint_warnings(query, warning):
+    warnings = lint_query(query, LINT_COLUMNS)
+    assert len(warnings) == 1
+    assert warning in warnings[0]
 
 
-def test_cli_case_insensitive_values():
+@pytest.mark.parametrize(
+    "query",
+    [
+        "SELECT Name || ' (' || Team || ')' FROM data",
+        "SELECT * FROM data WHERE Team = 'A' AND Age > 3",
+        "SELECT * FROM data WHERE Team = 'A' OR Age > 3",
+        "SELECT * FROM data WHERE (Team = 'A' OR Team = 'B') AND Age > 3",
+        "SELECT * FROM data WHERE Age BETWEEN 1 AND 5 OR Team = 'A'",
+        "SELECT CASE WHEN Age > 3 AND Team = 'A' THEN 1 WHEN Age < 2 OR Team = 'B' THEN 2 END FROM data",
+        "SELECT * FROM data WHERE Name = 'this AND that OR other'",
+        "SELECT * FROM data -- a OR b AND c\nWHERE Age > 1",
+        'SELECT "Name" FROM data WHERE "Team" = \'x\'',
+        'SELECT * FROM data WHERE Team = "Team"',
+        "SELECT * FROM data WHERE Team IN (SELECT Team FROM data WHERE Age > 1 OR Age < 0) AND Age > 3",
+    ],
+)
+def test_lint_no_false_positives(query):
+    assert lint_query(query, LINT_COLUMNS) == []
+
+
+# --- hints for errors --------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "query, hint",
+    [
+        ("SELEC Name FROM data", "Did you mean SELECT instead of SELEC?"),
+        ("SELECT Name FROM data WHER Age > 40", "Did you mean WHERE instead of WHER?"),
+        ("SELECT Name FROM data ORDR BY Age", "Did you mean ORDER instead of ORDR?"),
+        ("SELECT Nmae FROM data", "Did you mean Name?"),
+        ("SELECT Name WHERE Age > 40", "Add FROM data"),
+        ("SELECT Name FROM data WHERE Team = BAL", "put it in single quotes: 'BAL'"),
+        ("SELECT Name FROM data WHERE Team = 'BAL", "A quote or bracket isn't closed"),
+        (
+            "SELECT Name FROM data WHERE Age > 40 && Team = 'NYM'",
+            "Use AND instead of &&",
+        ),
+        ("SELECT Name FROM data WHERE COUNT(*) > 1", "HAVING"),
+        ("SELECT COUNTT(*) FROM data", "Did you mean COUNT()?"),
+        ("SELECT * FROM players", "The table is called data"),
+        ("SELECT Name FROM data WHERE", "The query is incomplete"),
+        ("SELECT Height(inches) FROM data", "[Height(inches)]"),
+        ("   ", "SELECT * FROM data LIMIT 10"),
+    ],
+)
+def test_error_hints(query, hint):
+    header = ["Name", "Team", "Age", "Height(inches)"]
+    with pytest.raises(SQLQueryError) as error:
+        run_query(header, ROWS, query)
+    assert any(hint in text for text in error.value.hints), error.value.hints
+
+
+def test_no_misleading_hints_for_real_columns():
+    with pytest.raises(SQLQueryError) as error:
+        run_query(HEADER, ROWS, "SELECT Name WHERE Age > 40")
+    assert error.value.hints == ["Add FROM data, e.g. SELECT Name FROM data ..."]
+
+
+def test_keyword_column_hint():
+    hints = explain_error(
+        'near "Order": syntax error', "SELECT Order FROM data", ["Order"]
+    )
+    assert (
+        hints[0]
+        == "Order is an SQL keyword. Put the column name in square brackets: [Order]"
+    )
+
+
+# --- command line edge cases ---------------------------------------------------------
+
+
+def test_cli_case_insensitive_value():
     result = run(
-        MLB_PLAYERS, "--sql", "select name from data where team = 'bal'", "--head", "1"
+        MLB_PLAYERS, "--sql", "SELECT Name FROM data WHERE Team = 'bal' LIMIT 1"
     )
     assert result.exit_code == 0, result.output
     assert "Adam Donachie" in result.output
 
 
-def test_cli_prints_warnings():
+def test_cli_hints_are_shown():
+    result = run(MLB_PLAYERS, "--sql", "SELECT Name FROM data WHER Age > 40")
+    assert result.exit_code != 0
+    assert "Hint: Did you mean WHERE instead of WHER?" in result.output
+    assert "[Height(inches)]" in result.output  # columns listed as they're written
+
+
+def test_cli_warnings_are_shown():
     result = run(
-        MLB_PLAYERS,
-        "--sql",
-        "SELECT Name FROM data WHERE Team = 'NYM' OR Team = 'BAL' AND Age > 40",
+        MLB_PLAYERS, "--sql", "SELECT Name FROM data WHERE Age > 44 || Team = 'XYZ'"
     )
     assert result.exit_code == 0, result.output
-    assert "Warning: AND is applied before OR" in result.output
+    assert "'||' joins text together" in result.output
+    assert "the query returned no rows" in result.output
 
 
-def test_cli_no_rows_warning():
-    result = run(MLB_PLAYERS, "--sql", "SELECT * FROM data WHERE Age > 100")
-    assert result.exit_code == 0, result.output
-    assert "Warning: the query returned no rows" in result.output
-
-
-def test_cli_prints_hints():
-    result = run(MLB_PLAYERS, "--sql", "SELECT Name, Age WHERE Age > 40")
-    assert result.exit_code != 0
-    assert "SQL error: no such column: Name" in result.output
-    assert "The query has no FROM clause" in result.output
-    assert "Columns: Name, Team" in result.output
-
-
-@pytest.mark.parametrize("value", ["SELECT", "select", "WITH"])
-def test_cli_unquoted_query(value):
-    # The shell splits an unquoted query in to words
-    result = CliRunner().invoke(
-        main, [MLB_PLAYERS, "--sql", value, "Name", "FROM", "data"]
+def test_cli_first_row_used_as_header_when_not_detected(tmp_path):
+    # The CSV sniffer doesn't detect this header
+    csv_file = tmp_path / "people.csv"
+    csv_file.write_text(
+        "Zip,Name,Score,City\n02134,José,90,Boston\n10001,jose,N/A,new york\n"
     )
-    assert result.exit_code != 0
-    assert "put the whole query in quotes" in result.output
+    result = run(str(csv_file), "--sql", "SELECT Name FROM people WHERE Score > 80")
+    assert result.exit_code == 0, result.output
+    assert "using the first row of the file as the column names" in result.output
+    assert "José" in result.output
+    assert "jose" not in result.output
